@@ -2,6 +2,7 @@ import { ChatCompletionCreateParams } from "openai/resources/index";
 import { ChatCompletionMessageParam } from "openai/src/resources/index.js";
 import { BaseLLM, toChatBody } from "..";
 import { ChatMessage, CompletionOptions, LLMOptions } from "../types";
+import { renderChatMessage } from "../utils/messageContent";
 
 const formatMessageForO1 = (messages: ChatCompletionMessageParam[]) => {
   return messages?.map((message: any) => {
@@ -32,37 +33,6 @@ class OpenAI extends BaseLLM {
 
   private isO3orO1Model(model?: string): boolean {
     return !!model && (model.startsWith("o1") || model.startsWith("o3"));
-  }
-
-  private isO3(model?: string): boolean {
-    return !!model && model.startsWith("o3");
-  }
-  private isValidJSON(str: string): boolean {
-    try {
-      JSON.parse(str);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  private isIncompleteJSON(str: string): boolean {
-    try {
-      JSON.parse(str);
-      return false;
-    } catch (e) {
-      // Check for typical incomplete JSON patterns
-      const lastChar = str.trim().slice(-1);
-      return (
-        str.includes("{") &&
-        (!str.includes("}") ||
-          lastChar === "," ||
-          lastChar === '"' ||
-          lastChar === ":" ||
-          lastChar === "[" ||
-          /[{[][ \n]*$/.test(str))
-      );
-    }
   }
 
   protected getMaxStopWords(): number {
@@ -140,9 +110,15 @@ class OpenAI extends BaseLLM {
   protected async *_streamComplete(
     prompt: string,
     signal: AbortSignal,
-    options: CompletionOptions
+    options: CompletionOptions,
   ): AsyncGenerator<string> {
-    throw new Error("Not implemented");
+    for await (const chunk of this._streamChat(
+      [{ role: "user", content: prompt }],
+      signal,
+      options,
+    )) {
+      yield renderChatMessage(chunk);
+    }
   }
 
   protected async *_streamChat(
