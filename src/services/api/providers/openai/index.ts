@@ -243,3 +243,5 @@ class OpenAI extends BaseLLM {
     return data.data.map((result: { embedding: number[] }) => result.embedding);
   }
 }
+
+export default OpenAI;

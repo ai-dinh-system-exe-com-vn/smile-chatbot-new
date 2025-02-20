@@ -1,7 +1,7 @@
 import { IndexedDBRepository } from "../IndexedDBRepository";
 
 export type ChatMessage = {
-  role: "user" | "system" | "assistant";
+  role: "user" | "system" | "assistant" | "loading";
   id: string;
   questionId?: string;
   thinkProcessId?: string;

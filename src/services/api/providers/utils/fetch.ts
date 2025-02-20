@@ -1,11 +1,5 @@
-
-import * as followRedirects from "follow-redirects";
-import { HttpProxyAgent } from "http-proxy-agent";
-import { HttpsProxyAgent } from "https-proxy-agent";
 import fetch, { RequestInit, Response } from "node-fetch";
 import { ClientCertificateOptions } from "../types";
-
-const { http, https } = (followRedirects as any).default;
 
 export interface RequestOptions {
   timeout?: number;
@@ -27,29 +21,6 @@ export function fetchwithRequestOptions(
   if (typeof url === "string") {
     url = new URL(url);
   }
-
-  const TIMEOUT = 7200; // 7200 seconds = 2 hours
-
-  const timeout = (requestOptions?.timeout ?? TIMEOUT) * 1000; // measured in ms
-
-  const agentOptions: { [key: string]: any } = {
-    rejectUnauthorized: requestOptions?.verifySsl,
-    timeout,
-    sessionTimeout: timeout,
-    keepAlive: true,
-    keepAliveMsecs: timeout,
-  };
-
-  const proxy = requestOptions?.proxy;
-
-  // Create agent
-  const protocol = url.protocol === "https:" ? https : http;
-  const agent =
-    proxy && !requestOptions?.noProxy?.includes(url.hostname)
-      ? protocol === https
-        ? new HttpsProxyAgent(proxy, agentOptions)
-        : new HttpProxyAgent(proxy, agentOptions)
-      : new protocol.Agent(agentOptions);
 
   let headers: { [key: string]: string } = {};
   for (const [key, value] of Object.entries(init?.headers || {})) {
@@ -84,7 +55,7 @@ export function fetchwithRequestOptions(
     ...init,
     body: updatedBody ?? init?.body,
     headers: headers,
-    agent: agent,
+    agent: false,
   });
 
   return resp;

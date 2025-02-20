@@ -3,6 +3,8 @@ import {
   ChatCompletionMessageParam,
 } from "openai/resources/index.mjs";
 import { ChatCompletionAssistantMessageParam } from "openai/src/resources/index.js";
+import { BaseLlmApi } from "./api-base";
+import { constructLlmApi } from "./constructLlmApi";
 import { OpenAi } from "./openai/models";
 import {
   ChatMessage,
@@ -142,6 +144,15 @@ export function toChatBody(
 
   return params;
 }
+export type LlmApiRequestType =
+  | "chat"
+  | "streamChat"
+  | "complete"
+  | "streamComplete"
+  | "streamFim"
+  | "embed"
+  | "rerank"
+  | "list";
 
 export const allModelProviders: ModelProvider[] = [OpenAi];
 
@@ -173,6 +184,7 @@ export abstract class BaseLLM {
   apiType?: string;
   apiKey?: string;
   deployment?: string;
+  protected openaiAdapter?: BaseLlmApi;
 
   get providerName(): string {
     return (this.constructor as typeof BaseLLM).providerName;
@@ -253,13 +265,31 @@ export abstract class BaseLLM {
     // this.projectId = options.projectId;
     // this.profile = options.profile;
 
-    // this.openaiAdapter = this.createOpenAiAdapter();
+    this.openaiAdapter = this.createOpenAiAdapter();
 
     // this.maxEmbeddingBatchSize =
     //   options.maxEmbeddingBatchSize ?? DEFAULT_MAX_BATCH_SIZE;
     // this.maxEmbeddingChunkSize =
     //   options.maxEmbeddingChunkSize ?? DEFAULT_MAX_CHUNK_SIZE;
     // this.embeddingId = `${this.constructor.name}::${this.model}::${this.maxEmbeddingChunkSize}`;
+  }
+
+  protected createOpenAiAdapter() {
+    return constructLlmApi({
+      provider: this.providerName as any,
+      apiKey: this.apiKey ?? "",
+      apiBase: this.apiBase,
+      requestOptions: this.requestOptions,
+    });
+  }
+
+  protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = [];
+
+  private shouldUseOpenAIAdapter(requestType: LlmApiRequestType) {
+    return (
+      this.useOpenAIAdapterFor.includes(requestType) ||
+      this.useOpenAIAdapterFor.includes("*")
+    );
   }
 
   protected modifyChatBody(
