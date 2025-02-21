@@ -1,14 +1,15 @@
 "use client";
 
+import { generateConversationId } from "@/lib/conversation";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-export default function HomeHero (){
-    const router = useRouter();
+export default function HomeHero() {
+  const router = useRouter();
 
   const createConversation = () => {
-    // const newId = ChatService.createConversationId();
-    // router.push(`/chat/${newId}`);
+    const newId = generateConversationId();
+    router.push(`/chat/${newId}`);
   };
 
   return (
@@ -31,7 +32,7 @@ export default function HomeHero (){
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <button
                 onClick={createConversation}
-                className="relative overflow-hidden px-8 py-3 text-lg font-medium text-white rounded-xl bg-gradient-to-r from-primary to-secondary transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25 min-w-[200px] group"
+                className="relative overflow-hidden px-8 py-3 text-lg font-medium text-white rounded-xl bg-gradient-to-r from-primary to-secondary transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25 min-w-[200px] group cursor-pointer"
               >
                 <span className="relative z-10">Start new chat</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

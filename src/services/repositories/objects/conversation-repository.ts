@@ -1,7 +1,7 @@
 import { IndexedDBRepository } from "../IndexedDBRepository";
 
 export type ChatMessage = {
-  role: "user" | "system" | "assistant" | "loading";
+  role: "user" | "system" | "assistant";
   id: string;
   questionId?: string;
   thinkProcessId?: string;
@@ -16,7 +16,7 @@ export type ThinkProcess = {
 };
 
 export type Conversation = {
-  id: string;
+  id: string; // Changed from number to string to be consistent
   title: string;
   isChangeTitle: boolean;
   persona?: string;

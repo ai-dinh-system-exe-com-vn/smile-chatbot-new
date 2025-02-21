@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ChatMessage } from "@/services/repositories/objects/conversations";
+import { ChatMessage } from "@/services/repositories/objects/conversation-repository";
 import { formatDistanceToNow } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
@@ -10,7 +10,10 @@ interface MessageActionsProps {
   onRegenerate?: (messageId: string) => void;
 }
 
-export const MessageActions = ({ message, onRegenerate }: MessageActionsProps) => {
+export const MessageActions = ({
+  message,
+  onRegenerate,
+}: MessageActionsProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const { role, id: messageId, content, timestamp } = message;
@@ -32,7 +35,7 @@ export const MessageActions = ({ message, onRegenerate }: MessageActionsProps) =
   if (role === "system") return null;
 
   return (
-    <motion.div 
+    <motion.div
       className="flex justify-between items-center mt-2 text-xs"
       initial={{ opacity: 0 }}
       animate={{ opacity: isHovered ? 1 : 0.5 }}
@@ -85,7 +88,7 @@ export const MessageActions = ({ message, onRegenerate }: MessageActionsProps) =
           </AnimatePresence>
         </motion.button>
 
-        {onRegenerate && messageId && (
+        {onRegenerate && role != "user" && messageId && (
           <motion.button
             className={cn(
               "btn btn-ghost btn-xs gap-1.5 rounded-lg",
@@ -98,23 +101,23 @@ export const MessageActions = ({ message, onRegenerate }: MessageActionsProps) =
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 400, 
+            transition={{
+              type: "spring",
+              stiffness: 400,
               damping: 25,
-              duration: 0.2 
+              duration: 0.2,
             }}
           >
-            <motion.span 
+            <motion.span
               className="flex items-center gap-1.5"
               initial={{ x: -5, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               whileHover={{ x: 2 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 400, 
+              transition={{
+                type: "spring",
+                stiffness: 400,
                 damping: 25,
-                delay: 0.1
+                delay: 0.1,
               }}
             >
               <BsArrowClockwise className="h-3.5 w-3.5" />
@@ -129,8 +132,8 @@ export const MessageActions = ({ message, onRegenerate }: MessageActionsProps) =
           className={cn(
             "text-xs font-medium px-2 py-1 rounded-md transition-colors",
             role === "assistant"
-              ? "text-base-content/70 hover:text-base-content"
-              : "text-primary-content/70 hover:text-primary-content"
+              ? "text-base-content"
+              : "text-primary-content"
           )}
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}

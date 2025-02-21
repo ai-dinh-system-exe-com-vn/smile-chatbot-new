@@ -15,7 +15,7 @@ export const MessageInput = () => {
     isLoading,
     isRegenerating,
     isThinkModeEnabled,
-    submitMessage,
+    handlerSubmitUserMessage,
     toggleThinkMode,
   } = useChatStore();
 
@@ -32,7 +32,7 @@ export const MessageInput = () => {
     const trimmedInput = localInput.trim();
     if (!trimmedInput || isLoading || isRegenerating) return;
 
-    submitMessage(trimmedInput);
+    handlerSubmitUserMessage(trimmedInput);
     setLocalInput("");
   };
 

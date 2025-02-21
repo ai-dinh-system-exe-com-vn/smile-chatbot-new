@@ -51,7 +51,6 @@ export default function Template({
         conversations={dummyConversations}
         onNewChat={() => console.log('New chat')}
         onSelectModel={(model) => console.log('Selected model:', model)}
-        onSettings={() => console.log('Settings clicked')}
         onConversationAction={(id, action) => console.log('Action:', action, 'on conversation:', id)}
       />
       

@@ -1,18 +1,22 @@
-import { constructLlmApi } from "@/services/api/providers/constructLlmApi";
-import { ChatMessage } from "@/services/repositories/objects/conversations";
+import { completeSteam } from "@/services/chat-service";
+import { ChatMessage } from "@/services/repositories/objects/conversation-repository";
 import { ChatCompletionSystemMessageParam } from "openai/resources/index.mjs";
 import { create } from "zustand";
+import { useGlobalStore } from "./global-store";
 
 type AddMessageOptions = {
   removeIndex?: number; // index của message cần loại bỏ, nếu có
   removeLast?: boolean; // nếu true, loại bỏ phần tử cuối cùng
 };
+
 interface ChatState {
+  conversationId: string;
   messages: ChatMessage[];
   isLoading: boolean;
   isRegenerating: boolean;
   isThinkModeEnabled: boolean;
   messageMainStream: string;
+  setConversationId: (id: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   setMessageMainStream: (content: string) => void;
   addMessage: (message: ChatMessage, options?: AddMessageOptions) => void;
@@ -20,181 +24,130 @@ interface ChatState {
   setIsLoading: (isLoading: boolean) => void;
   setIsRegenerating: (isRegenerating: boolean) => void;
   toggleThinkMode: () => void;
-  submitMessage: (content: string) => Promise<void>;
+  handlerSubmitUserMessage: (content: string) => Promise<void>;
   regenerateMessage: (messageId: string) => Promise<void>;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
-  messages: [
-    {
-      id: "1",
-      role: "user",
-      content: "Hello! How are you?",
-      timestamp: Date.now() - 3600000,
-    },
-    {
-      id: "2",
-      role: "assistant",
-      content:
-        "Hi! I'm doing great, thank you for asking. How can I help you today?",
-      timestamp: Date.now() - 3500000,
-    },
-    {
-      id: "3",
-      role: "user",
-      content: "Can you help me with my project?",
-      timestamp: Date.now() - 3300000,
-    },
-    {
-      id: "4",
-      role: "assistant",
-      content:
-        "Of course! I'd be happy to help you with your project. Please tell me more about what you need assistance with.",
-      timestamp: Date.now() - 3200000,
-    },
-  ],
-  isLoading: false,
-  isRegenerating: false,
-  isThinkModeEnabled: false,
+export const useChatStore = create<ChatState>((set, get, api) => {
+  api.subscribe((state, prevState) => {
+    if (state.conversationId !== prevState.conversationId) {
 
-  messageMainStream: "",
-  setMessageMainStream: (content) => set({ messageMainStream: content }),
+      console.log("setConversationId", state.conversationId);
+    }
+    // console.log("ChatStore", state, prevState);
+  });
 
-  setMessages: (messages) => set({ messages }),
+  return {
+    messages: [],
+    isLoading: false,
+    isRegenerating: false,
+    isThinkModeEnabled: false,
+    messageMainStream: "",
+    conversationId: "",
 
-  addMessage: (message: ChatMessage, options?: AddMessageOptions) =>
-    set((state) => {
-      // Tạo bản sao messages để thao tác
-      const messages = [...state.messages];
+    setConversationId: (id: string) => set({ conversationId: id }),
+    setMessageMainStream: (content) => set({ messageMainStream: content }),
 
-      // Nếu có chỉ định removeIndex và index hợp lệ thì loại bỏ message ở vị trí đó
-      if (
-        options?.removeIndex !== undefined &&
-        options.removeIndex >= 0 &&
-        options.removeIndex < messages.length
-      ) {
-        messages.splice(options.removeIndex, 1);
-      }
-      // Nếu không có removeIndex mà lại chỉ định removeLast
-      else if (options?.removeLast) {
-        // Nếu mảng messages không rỗng, loại bỏ phần tử cuối cùng
-        if (messages.length > 0) {
-          messages.pop();
+    setMessages: (messages) => set({ messages }),
+
+    addMessage: (message: ChatMessage, options?: AddMessageOptions) =>
+      set((state) => {
+        const messages = [...state.messages];
+
+        if (
+          options?.removeIndex !== undefined &&
+          options.removeIndex >= 0 &&
+          options.removeIndex < messages.length
+        ) {
+          messages.splice(options.removeIndex, 1);
+        } else if (options?.removeLast) {
+          if (messages.length > 0) {
+            messages.pop();
+          }
         }
-      }
 
-      // Thêm message mới vào cuối mảng
-      messages.push(message);
+        messages.push(message);
 
-      return { messages };
-    }),
+        return { messages };
+      }),
 
-  updateMessage: (messageId, updates) =>
-    set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === messageId ? { ...msg, ...updates } : msg
-      ),
-    })),
+    updateMessage: (messageId, updates) =>
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === messageId ? { ...msg, ...updates } : msg
+        ),
+      })),
 
-  setIsLoading: (isLoading) => set({ isLoading }),
+    setIsLoading: (isLoading) => set({ isLoading }),
 
-  setIsRegenerating: (isRegenerating) => set({ isRegenerating }),
+    setIsRegenerating: (isRegenerating) => set({ isRegenerating }),
 
-  toggleThinkMode: () =>
-    set((state) => ({
-      isThinkModeEnabled: !state.isThinkModeEnabled,
-    })),
+    toggleThinkMode: () =>
+      set((state) => ({
+        isThinkModeEnabled: !state.isThinkModeEnabled,
+      })),
 
-  submitMessage: async (content: string) => {
-    const { addMessage, setIsLoading, messages } = get();
-    let messageSend: ChatMessage[] = [...messages];
+    handlerSubmitUserMessage: async (content: string) => {
+      const { addMessage, setIsLoading, messages } = get();
+      const globalApiKey = useGlobalStore.getState().globalApiKey;
+      let messageSend: ChatMessage[] = [...messages];
 
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content,
-      timestamp: Date.now(),
-    };
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: "user",
+        content,
+        timestamp: Date.now(),
+      };
 
-    messageSend.push(newMessage);
+      messageSend.push(newMessage);
 
-    const loadMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: "loading",
-      content: "Loading...",
-      timestamp: Date.now(),
-    };
-    set({ messageMainStream: "loading" });
-    addMessage(newMessage);
-    addMessage(loadMessage);
-    setIsLoading(true);
+      addMessage(newMessage);
+      setIsLoading(true);
 
-    const stream: any = constructLlmApi({
-      provider: "openai",
-      apiKey:
-        "sk-",
-    })?.chatCompletionStream(
-      {
-        model: "o3-mini-2025-01-31",
-        messages: messageSend.map((item) => {
+      const completion = await completeSteam({
+        messageSend: messageSend.map((item) => {
           return {
             role: item.role,
             content: item.content,
           } as ChatCompletionSystemMessageParam;
         }),
-        stream: true,
-      },
-      new AbortController().signal
-    );
+        onStream: (message) => {
+          set({ messageMainStream: message });
+        },
+        config: {
+          provider: "openai",
+          apiKey: globalApiKey,
+        },
+      });
 
-    let completion = "";
-    for await (const result of stream) {
-      completion += result.choices[0].delta.content ?? "";
-      set({ messageMainStream: completion });
-    }
+      const botResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: completion,
+        timestamp: Date.now(),
+      };
+      set({ messageMainStream: "" });
+      addMessage(botResponse);
+      setIsLoading(false);
+    },
 
-    const botResponse: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: completion,
-      timestamp: Date.now(),
-    };
-    set({ messageMainStream: "" });
-    addMessage(botResponse, { removeLast: true });
-    setIsLoading(false);
+    regenerateMessage: async (messageId: string) => {
+      const { setIsRegenerating, updateMessage } = get();
 
-    // return new Promise((resolve) => {
-    //   setTimeout(() => {
-    //     const botResponse: ChatMessage = {
-    //       id: (Date.now() + 1).toString(),
-    //       role: "assistant",
-    //       content:
-    //         "This is a simulated response. In a real application, this would be from an API call.",
-    //       timestamp: Date.now(),
-    //     };
-    //     addMessage(botResponse, { removeLast: true });
-    //     setIsLoading(false);
-    //     resolve();
-    //   }, 3000);
-    // });
-  },
+      setIsRegenerating(true);
 
-  regenerateMessage: async (messageId: string) => {
-    const { setIsRegenerating, updateMessage } = get();
-
-    setIsRegenerating(true);
-
-    // Simulate regeneration
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        updateMessage(messageId, {
-          content:
-            "This is a regenerated response. In a real application, this would be from an API call.",
-          timestamp: Date.now(),
-        });
-        setIsRegenerating(false);
-        resolve();
-      }, 2000);
-    });
-  },
-}));
+      // Simulate regeneration
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          updateMessage(messageId, {
+            content:
+              "This is a regenerated response. In a real application, this would be from an API call.",
+            timestamp: Date.now(),
+          });
+          setIsRegenerating(false);
+          resolve();
+        }, 2000);
+      });
+    },
+  };
+});

@@ -1,10 +1,8 @@
+"use client";
+
 import { motion } from "framer-motion";
-import {
-  FiMenu,
-  FiMoreVertical,
-  FiPlus,
-  FiSettings
-} from "react-icons/fi";
+import { parseAsBoolean, useQueryState } from "nuqs";
+import { FiMenu, FiMoreVertical, FiPlus, FiSettings } from "react-icons/fi";
 
 export interface Conversation {
   id: string;
@@ -18,7 +16,6 @@ export interface SidebarProps {
   onToggleCollapse?: () => void;
   onNewChat?: () => void;
   onSelectModel?: (model: string) => void;
-  onSettings?: () => void;
   onConversationAction?: (
     id: string,
     action: "delete" | "pin" | "settings"
@@ -31,10 +28,13 @@ export default function Sidebar({
   onToggleCollapse,
   onNewChat,
   onSelectModel,
-  onSettings,
   onConversationAction,
 }: SidebarProps) {
   const models = ["o3-mini", "o1-mini"];
+  const [isOpenGlobalSettingModal, setIsOpenGlobalSettingModal] = useQueryState(
+    "isOpenGlobalSettingModal",
+    parseAsBoolean.withDefault(false)
+  );
 
   const sidebarVariants = {
     expanded: { width: "320px", opacity: 1 },
@@ -162,7 +162,9 @@ export default function Sidebar({
         </select>
         <motion.button
           className="btn btn-ghost btn-circle"
-          onClick={onSettings}
+          onClick={() => {
+            setIsOpenGlobalSettingModal(true);
+          }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
